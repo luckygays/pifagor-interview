@@ -1,6 +1,153 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PIFAGOR — собеседование</title><style>:root{font-family:Inter,system-ui,Arial,sans-serif;color:#172337;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}.wrap{max-width:760px;margin:40px auto;padding:0 18px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.brand{font-weight:800;font-size:22px;letter-spacing:.04em}.tag{font-size:12px;color:#65738a}main{background:white;border:1px solid #e3e8ef;border-radius:18px;padding:28px;box-shadow:0 8px 28px #1b31530b}h1{font-size:25px;margin:0 0 8px}h2{font-size:17px;margin:28px 0 14px}.muted{color:#64748b;font-size:13px;line-height:1.5}label{font-size:13px;font-weight:650;display:block;margin:16px 0 7px}input,select,textarea{width:100%;padding:12px 13px;border:1px solid #cdd6e2;border-radius:9px;font:inherit;background:white;color:inherit}textarea{resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}.score{padding:14px 0;border-bottom:1px solid #edf0f5}.score-head{display:flex;justify-content:space-between;gap:10px}.buttons{display:flex;gap:8px;margin-top:10px}.buttons button{flex:1;border:1px solid #cbd5e1;background:white;border-radius:8px;padding:10px;cursor:pointer;font-weight:650;color:#34445a}.buttons button.active{background:#1c355a;color:white;border-color:#1c355a}.hint{font-size:12px;color:#68788c;margin-top:4px}.note{padding:12px;background:#f4f7fb;border-radius:10px;margin:12px 0;font-size:13px;color:#475569}button.submit{width:100%;background:#1c355a;border:0;border-radius:10px;color:white;padding:15px;font-weight:700;cursor:pointer;margin-top:24px}button:disabled{opacity:.5;cursor:not-allowed}#status{font-size:13px;margin-top:14px;min-height:22px}.bad{color:#b42318}.good{color:#067647}.small{font-size:12px;color:#64748b;margin-top:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:18px}.wrap{margin:20px auto}}</style></head><body><div class="wrap"><header><div class="brand">PIFAGOR <span class="tag">/ HR</span></div><span class="tag">Карточка собеседования</span></header><main><h1>Оценка кандидата</h1><p class="muted">Заполните после интервью за 2–3 минуты. Оценивайте ответы и конкретные примеры, а не первое впечатление.</p><form id="f"><div class="grid"><div><label>Имя и фамилия кандидата *</label><input name="candidate" required maxlength="120"></div><div><label>Предмет *</label><select name="subject" required><option value="">Выберите</option><option>Математика</option><option>Физика</option><option>Химия</option><option>Биология</option><option>Обществоведение</option><option>Другое</option></select></div><div><label>Интервьюер *</label><input name="interviewer" required maxlength="100"></div><div><label>Подтверждённая нагрузка (ч/нед.) *</label><input name="hours" type="number" min="0" max="50" step="0.5" required></div></div><h2>Четыре оценки</h2><div class="note">1 — слабый уровень · 3 — приемлемо · 5 — убедительно. Если нет данных для оценки, уточните ответ или проведите проверку.</div><div id="scores"></div><h2>Итог</h2><label>Конкретные наблюдения и риски *</label><textarea name="comment" rows="3" required maxlength="800" placeholder="Например: уверенно объяснил дроби, но не смог назвать свободные дни на ближайший месяц"></textarea><label>Рекомендация интервьюера *</label><select name="verdict" required><option value="">Выберите</option><option>Рекомендую</option><option>Сомневаюсь</option><option>Не рекомендую</option></select><button class="submit" type="submit">Сохранить собеседование</button><div id="status" role="status"></div><p class="small">Решение о найме принимает руководство. Запись сохраняется в Google-таблице Пифагора.</p></form></main></div><iframe name="sink" id="sink" style="display:none" title="Ответ сервера"></iframe><script src="config.js"></script><script>
-const criteria=[['Знания','Правильность решений и понимание темы'],['Объяснение','Может объяснить материал простыми словами'],['Общение','Слушает вопросы, отвечает ясно и уважительно'],['Надёжность','Назвал конкретные свободные часы и действия при изменении нагрузки']];
-const scores=document.getElementById('scores');criteria.forEach(([name,hint],i)=>{const d=document.createElement('div');d.className='score';d.innerHTML=`<div class="score-head"><strong>${name}</strong><span id="v${i}" class="muted">Не оценено</span></div><div class="hint">${hint}</div><div class="buttons">${[1,2,3,4,5].map(n=>`<button type="button" data-i="${i}" data-n="${n}" aria-label="${name}: ${n}">${n}</button>`).join('')}</div>`;scores.appendChild(d)});const marks=[0,0,0,0];scores.addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(!b)return;const i=+b.dataset.i,n=+b.dataset.n;marks[i]=n;document.getElementById('v'+i).textContent=n+'/5';b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b))});
-const form=document.getElementById('f'),status=document.getElementById('status');let pending=false;window.addEventListener('message',e=>{if(!pending)return;if(e.data?.source!=='pifagor-interview')return;pending=false;form.querySelector('.submit').disabled=false;if(e.data.ok){status.className='good';status.textContent='Сохранено в таблице';form.reset();marks.fill(0);document.querySelectorAll('.buttons button').forEach(b=>b.classList.remove('active'));criteria.forEach((_,i)=>document.getElementById('v'+i).textContent='Не оценено')}else{status.className='bad';status.textContent='Ошибка сохранения: '+(e.data.message||'проверьте настройки')}});
-form.addEventListener('submit',e=>{e.preventDefault();if(marks.some(x=>!x)){status.className='bad';status.textContent='Поставьте все четыре оценки';return}if(!window.PIFAGOR_SCRIPT_URL||window.PIFAGOR_SCRIPT_URL.includes('PASTE')){status.className='bad';status.textContent='Сайт пока не подключён к Google Apps Script. Укажите URL в config.js';return}const fd=new FormData(form);['knowledge','explanation','communication','reliability'].forEach((key,i)=>fd.set(key,marks[i]));const f=document.createElement('form');f.method='POST';f.action=window.PIFAGOR_SCRIPT_URL;f.target='sink';f.style.display='none';for(const [k,v] of fd){const input=document.createElement('input');input.name=k;input.value=v;f.appendChild(input)}document.body.appendChild(f);pending=true;form.querySelector('.submit').disabled=true;status.className='';status.textContent='Сохраняем…';f.submit();f.remove();setTimeout(()=>{if(pending){pending=false;form.querySelector('.submit').disabled=false;status.className='bad';status.textContent='Нет подтверждения от сервера. Проверьте таблицу перед повторной отправкой.'}},12000)});
-</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIFAGOR — собеседование</title>
+<style>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#172337;background:#f5f7fb}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:760px;margin:40px auto;padding:0 18px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.brand{font-weight:800;font-size:22px;letter-spacing:.04em}.tag{font-size:12px;color:#65738a}
+main{background:white;border:1px solid #e3e8ef;border-radius:18px;padding:28px;box-shadow:0 8px 28px #1b31530b}
+h1{font-size:25px;margin:0 0 8px}h2{font-size:17px;margin:28px 0 14px}
+.muted{color:#64748b;font-size:13px;line-height:1.5}
+label{font-size:13px;font-weight:650;display:block;margin:16px 0 7px}
+input,select,textarea{width:100%;padding:12px 13px;border:1px solid #cdd6e2;border-radius:9px;font:inherit;background:white;color:inherit}
+textarea{resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}
+.score{padding:14px 0;border-bottom:1px solid #edf0f5}
+.score-head{display:flex;justify-content:space-between;gap:10px}
+.buttons{display:flex;gap:8px;margin-top:10px}
+.buttons button{flex:1;border:1px solid #cbd5e1;background:white;border-radius:8px;padding:10px;cursor:pointer;font-weight:650;color:#34445a}
+.buttons button.active{background:#1c355a;color:white;border-color:#1c355a}
+.hint{font-size:12px;color:#68788c;margin-top:4px}
+.note{padding:12px;background:#f4f7fb;border-radius:10px;margin:12px 0;font-size:13px;color:#475569}
+button.submit{width:100%;background:#1c355a;border:0;border-radius:10px;color:white;padding:15px;font-weight:700;cursor:pointer;margin-top:24px}
+button:disabled{opacity:.5;cursor:not-allowed}
+#status{font-size:13px;margin-top:14px;min-height:22px;line-height:1.5}
+.bad{color:#b42318}.good{color:#067647}.small{font-size:12px;color:#64748b;margin-top:12px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:18px}.wrap{margin:20px auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="brand">PIFAGOR <span class="tag">/ HR</span></div><span class="tag">Карточка собеседования</span></header>
+<main>
+<h1>Оценка кандидата</h1>
+<p class="muted">Заполните после интервью за 2–3 минуты. Оценивайте ответы и конкретные примеры, а не первое впечатление.</p>
+<form id="f">
+<div class="grid">
+<div><label>Имя и фамилия кандидата *</label><input name="candidate" required maxlength="120"></div>
+<div><label>Предмет *</label><select name="subject" required><option value="">Выберите</option><option>Математика</option><option>Физика</option><option>Химия</option><option>Биология</option><option>Обществоведение</option><option>Другое</option></select></div>
+<div><label>Интервьюер *</label><input name="interviewer" required maxlength="100"></div>
+<div><label>Подтверждённая нагрузка (ч/нед.) *</label><input name="hours" type="number" min="0" max="50" step="0.5" required></div>
+</div>
+<h2>Четыре оценки</h2>
+<div class="note">1 — слабый уровень · 3 — приемлемо · 5 — убедительно. Если нет данных для оценки, уточните ответ или проведите проверку.</div>
+<div id="scores"></div>
+<h2>Итог</h2>
+<label>Конкретные наблюдения и риски *</label>
+<textarea name="comment" rows="3" required maxlength="800" placeholder="Например: уверенно объяснил дроби, но не смог назвать свободные дни на ближайший месяц"></textarea>
+<label>Рекомендация интервьюера *</label>
+<select name="verdict" required><option value="">Выберите</option><option>Рекомендую</option><option>Сомневаюсь</option><option>Не рекомендую</option></select>
+<button class="submit" type="submit">Сохранить собеседование</button>
+<div id="status" role="status" aria-live="polite"></div>
+<p class="small">Решение о найме принимает руководство. Запись сохраняется в Google-таблице Пифагора.</p>
+</form>
+</main></div>
+<iframe name="sink" id="sink" style="display:none" title="Отправка анкеты"></iframe>
+<script src="config.js"></script>
+<script>
+'use strict';
+const criteria=[
+ ['Знания','Правильность решений и понимание темы'],
+ ['Объяснение','Может объяснить материал простыми словами'],
+ ['Общение','Слушает вопросы, отвечает ясно и уважительно'],
+ ['Надёжность','Назвал конкретные свободные часы и действия при изменении нагрузки']
+];
+const scores=document.getElementById('scores');
+criteria.forEach(([name,hint],i)=>{
+ const d=document.createElement('div');d.className='score';
+ d.innerHTML=`<div class="score-head"><strong>${name}</strong><span id="v${i}" class="muted">Не оценено</span></div><div class="hint">${hint}</div><div class="buttons">${[1,2,3,4,5].map(n=>`<button type="button" data-i="${i}" data-n="${n}" aria-label="${name}: ${n}">${n}</button>`).join('')}</div>`;
+ scores.appendChild(d);
+});
+const marks=[0,0,0,0];
+scores.addEventListener('click',e=>{
+ const b=e.target.closest('button[data-i]');if(!b)return;
+ const i=Number(b.dataset.i),n=Number(b.dataset.n);marks[i]=n;
+ document.getElementById('v'+i).textContent=n+'/5';
+ b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+});
+const form=document.getElementById('f');
+const status=document.getElementById('status');
+const submit=form.querySelector('.submit');
+let pending=false,requestId=null,pollTimer=null,timeoutTimer=null,checkScript=null,checkTimeout=null;
+function show(message,type=''){status.className=type;status.textContent=message;}
+function resetScores(){
+ marks.fill(0);
+ document.querySelectorAll('.buttons button').forEach(b=>b.classList.remove('active'));
+ criteria.forEach((_,i)=>document.getElementById('v'+i).textContent='Не оценено');
+}
+function stopChecking(){
+ if(pollTimer)clearInterval(pollTimer);
+ if(timeoutTimer)clearTimeout(timeoutTimer);
+ if(checkTimeout)clearTimeout(checkTimeout);
+ if(checkScript){checkScript.remove();checkScript=null;}
+ pollTimer=null;timeoutTimer=null;checkTimeout=null;
+}
+function finishSaved(){
+ stopChecking();pending=false;requestId=null;submit.disabled=false;
+ form.reset();resetScores();show('Собеседование сохранено в Google-таблице.','good');
+}
+function finishError(message){
+ stopChecking();pending=false;submit.disabled=false;
+ show('Ошибка сохранения: '+(message||'неизвестная ошибка')+'. Исправьте проблему перед повторной отправкой.','bad');
+}
+function finishUnknown(){
+ stopChecking();pending=false;submit.disabled=false;
+ show('Не удалось подтвердить сохранение. Сначала проверьте Google-таблицу. Не отправляйте анкету повторно, пока не убедитесь, что строки нет.','bad');
+}
+// This callback name must match the currently deployed Code.gs doGet() JSONP response.
+window.pifagorResult=function(result){
+ if(!pending||!result||result.id!==requestId)return;
+ if(checkTimeout)clearTimeout(checkTimeout);
+ if(checkScript){checkScript.remove();checkScript=null;}
+ if(result.state==='saved')finishSaved();
+ else if(result.state==='error')finishError(result.message);
+};
+function checkStatus(){
+ if(!pending||checkScript)return;
+ const script=document.createElement('script');
+ checkScript=script;
+ const url=new URL(window.PIFAGOR_SCRIPT_URL);
+ url.searchParams.set('requestId',requestId);
+ url.searchParams.set('_',String(Date.now()));
+ script.src=url.toString();
+ script.onerror=()=>{if(checkTimeout)clearTimeout(checkTimeout);script.remove();if(checkScript===script)checkScript=null;};
+ checkTimeout=setTimeout(()=>{script.remove();if(checkScript===script)checkScript=null;},5000);
+ document.head.appendChild(script);
+}
+form.addEventListener('submit',e=>{
+ e.preventDefault();
+ if(pending)return;
+ if(marks.some(x=>!x)){show('Поставьте все четыре оценки.','bad');return;}
+ if(!window.PIFAGOR_SCRIPT_URL||!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(window.PIFAGOR_SCRIPT_URL)){
+  show('Проверьте адрес Google Apps Script в config.js.','bad');return;
+ }
+ if(!requestId)requestId=crypto.randomUUID();
+ const fd=new FormData(form);
+ ['knowledge','explanation','communication','reliability'].forEach((key,i)=>fd.set(key,String(marks[i])));
+ fd.set('requestId',requestId);
+ const post=document.createElement('form');
+ post.method='POST';post.action=window.PIFAGOR_SCRIPT_URL;post.target='sink';post.style.display='none';
+ for(const [key,value] of fd){const input=document.createElement('input');input.name=key;input.value=value;post.appendChild(input);}
+ document.body.appendChild(post);
+ pending=true;submit.disabled=true;show('Сохраняем и проверяем результат…');
+ post.submit();post.remove();
+ pollTimer=setInterval(checkStatus,2500);
+ timeoutTimer=setTimeout(finishUnknown,35000);
+ setTimeout(checkStatus,1200);
+});
+</script>
+</body>
+</html>
